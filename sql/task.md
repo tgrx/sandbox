@@ -73,12 +73,12 @@ SELECT ... -- какой запрос?
 
 | cid | customer | pid |   good    |
 |-----|----------|-----|-----------|
-|   ~~1~~ | ~~Alice~~    |   ~~1~~ | ~~Apple~~     |
-|   ~~1~~ | ~~Alice~~    |   ~~2~~ | ~~Banana~~    |
-|   2 | Bob      |   3 | Phone     |
-|   2 | Bob      |   4 | MacBook   |
-|   2 | Bob      |   5 | Coca-Cola |
-|   ~~3~~ | ~~Charlie~~  |   ~~6~~ | ~~Ferrari~~   |
+|   *1* | *Alice*    |   *1* | *Apple*     |
+|   *1* | *Alice*    |   *2* | *Banana*    |
+|   **2** | **Bob**      |   **3** | **Phone**     |
+|   **2** | **Bob**      |   **4** | **MacBook**   |
+|   **2** | **Bob**      |   **5** | **Coca-Cola** |
+|   *3* | *Charlie*  |   *6* | *Ferrari*   |
 
 <style>
 hide {
