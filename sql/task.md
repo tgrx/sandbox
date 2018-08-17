@@ -91,4 +91,26 @@ hide:hover {
 }
 </style>
 
-Подсказка: <hide>row_number()</hide>
+<details><summary>Подсказка:</summary>
+
+```sql
+SELECT
+    row_number() OVER (), -- туть
+    *
+FROM
+    customers
+    JOIN purchases USING (cid)
+;
+```
+
+| row_number | cid | customer | pid |   good    |
+|------------|-----|----------|-----|-----------|
+|          1 |   1 | Alice    |   1 | Apple     |
+|          2 |   1 | Alice    |   2 | Banana    |
+|          3 |   2 | Bob      |   3 | Phone     |
+|          4 |   2 | Bob      |   4 | MacBook   |
+|          5 |   2 | Bob      |   5 | Coca-Cola |
+|          6 |   3 | Charlie  |   6 | Ferrari   |
+
+
+</details>
