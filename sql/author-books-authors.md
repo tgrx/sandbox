@@ -274,7 +274,7 @@ Execution Time: 230.749 ms
 
 ### Approach 2: GROUP BY subquery + WHERE
 
-Almost the same as [Approach 1](#markdown-header-approach-1-having). Grouped data is closed under the subquery, and main query performs WHERE filtering, hoping that there is no need to produce the aggregate twice.
+Almost the same as [Approach 1](#approach-1-having). Grouped data is closed under the subquery, and main query performs WHERE filtering, hoping that there is no need to produce the aggregate twice.
 
 Kek. PostgreSQL is smart indeed: try to observe and compare query plans.
 
