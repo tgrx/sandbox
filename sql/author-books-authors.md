@@ -264,13 +264,13 @@ Execution Time: 230.749 ms
 
 </details>
 
-Cost: 7340~8336
+💰 Cost: 7340~8336
 
-Timing: 213~285
+⌛️ Timing: 213~285
 
-Pros: selecting ordered data
+✅ Pros: selecting ordered data
 
-Cons: aggregate filter in `having`
+❌ Cons: aggregate filter in `having`
 
 ### Approach 2: GROUP BY subquery + WHERE
 
@@ -342,13 +342,13 @@ Execution Time: 230.062 ms
 
 </details>
 
-Cost: 7340~8336
+💰 Cost: 7340~8336
 
-Timing: 215~324
+⌛ Timing: 215~324
 
-Pros: `¯\_(ツ)_/¯`
+✅ Pros: `¯\_(ツ)_/¯`
 
-Cons: drop of self-esteem.
+❌ Cons: drop of self-esteem.
 
 ### Approach 3: CTE
 
@@ -421,13 +421,13 @@ Execution Time: 226.645 ms
 
 </details>
 
-Cost: 8075~8478
+💰 Cost: 8075~8478
 
-Timing: 222~338
+⌛ Timing: 222~338
 
-Pros: `¯\_(ツ)_/¯`
+✅ Pros: `¯\_(ツ)_/¯`
 
-Cons: drop of self-esteem, again.
+❌ Cons: drop of self-esteem, again.
 
 ### Approach 4: JOIN LATERAL
 
@@ -525,10 +525,10 @@ Execution Time: 74.299 ms
 
 </details>
 
-Cost: 3301~3502
+💰 Cost: 3301~3502
 
-Timing: 65~100
+⌛ Timing: 65~100
 
-Pros: Fast and furious!
+✅ Pros: Fast and furious!
 
-Cons: drop of self-esteem, again: one does not simply understand `LATERAL`.
+❌ Cons: drop of self-esteem, again: one does not simply understand `LATERAL`.
