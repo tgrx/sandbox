@@ -1,5 +1,11 @@
 # Author-Books-Authors
 
+## Spoilers!
+
+| Approach | Costs | Timing |
+|----------|-------|--------|
+
+
 ## Description
 
 There are two tables: `authors` and `books`, bound as many-to-many via intermediate table `ab`.
@@ -202,7 +208,7 @@ select
 
 </details>
 
-### Approach 1: HAVING
+### Approach 1: "HAVING"
 
 Yep, just filtering of grouped data. 
 
@@ -230,26 +236,20 @@ select
 <details><summary>Query plan</summary>
 
 ```text
-GroupAggregate  (cost=7340.08..8336.11 rows=90 width=36) (actual time=112.514..227.972 rows=2626 loops=1)
+GroupAggregate  (cost=7380.76..8376.78 rows=90 width=36)
   Group Key: b.book
   Filter: ('{M}'::text[] <@ array_agg(a.author))
-  Rows Removed by Filter: 15275
-  ->  Sort  (cost=7340.08..7510.77 rows=68276 width=6) (actual time=110.746..132.872 rows=68276 loops=1)
+  ->  Sort  (cost=7380.76..7551.45 rows=68276 width=6)
         Sort Key: b.book
-        Sort Method: external merge  Disk: 1136kB
-        ->  Hash Join  (cost=484.36..1857.83 rows=68276 width=6) (actual time=7.462..65.169 rows=68276 loops=1)
+        ->  Hash Join  (cost=553.97..1898.50 rows=68276 width=6)
               Hash Cond: (ab.book = b.book)
-              ->  Hash Join  (cost=1.58..1195.78 rows=68276 width=6) (actual time=0.068..35.293 rows=68276 loops=1)
+              ->  Hash Join  (cost=71.20..1236.46 rows=68276 width=6)
                     Hash Cond: (ab.author = a.author)
-                    ->  Seq Scan on ab  (cost=0.00..985.76 rows=68276 width=6) (actual time=0.027..12.892 rows=68276 loops=1)
-                    ->  Hash  (cost=1.26..1.26 rows=26 width=2) (actual time=0.020..0.020 rows=26 loops=1)
-                          Buckets: 1024  Batches: 1  Memory Usage: 9kB
-                          ->  Seq Scan on authors a  (cost=0.00..1.26 rows=26 width=2) (actual time=0.006..0.011 rows=26 loops=1)
-              ->  Hash  (cost=259.01..259.01 rows=17901 width=4) (actual time=6.769..6.769 rows=17901 loops=1)
-                    Buckets: 32768  Batches: 1  Memory Usage: 900kB
-                    ->  Seq Scan on books b  (cost=0.00..259.01 rows=17901 width=4) (actual time=0.024..2.346 rows=17901 loops=1)
-Planning Time: 0.797 ms
-Execution Time: 230.749 ms
+                    ->  Seq Scan on ab  (cost=0.00..985.76 rows=68276 width=6)
+                    ->  Hash  (cost=37.20..37.20 rows=2720 width=2)
+                          ->  Seq Scan on authors a  (cost=0.00..37.20 rows=2720 width=2)
+              ->  Hash  (cost=259.01..259.01 rows=17901 width=4)
+                    ->  Seq Scan on books b  (cost=0.00..259.01 rows=17901 width=4)
 ```
 
 </details>
@@ -264,19 +264,22 @@ Execution Time: 230.749 ms
 
 </details>
 
-💰 Cost: 7340~8336
+💰 Cost: 7380 ~ 8376
 
-⌛️ Timing: 213~285
+⌛️ Timing: 256 _±51_ ms
 
-✅ Pros: selecting ordered data
+✅ Pros: selecting ordered data (eliminated by GroupAggregate)
 
 ❌ Cons: aggregate filter in `having`
 
-### Approach 2: GROUP BY subquery + WHERE
+### Approach 2: "GROUP BY" subquery + "WHERE"
 
-Almost the same as [Approach 1](#approach-1-having). Grouped data is closed under the subquery, and main query performs WHERE filtering, hoping that there is no need to produce the aggregate twice.
+Almost the same as [Approach 1](#approach-1-having).
+Grouped data is closed under the subquery, and main query performs WHERE filtering.
 
-Kek. PostgreSQL is smart indeed: try to observe and compare query plans.
+What one may expect: there is no need to produce the aggregate twice, for both `SELECT` and `HAVING`.
+
+What the reality hits with: try to observe and compare query plans. PostgreSQL is smart indeed.
 
 <details><summary>SQL</summary>
 
@@ -308,26 +311,20 @@ select
 <details><summary>Query plan</summary>
 
 ```text
-GroupAggregate  (cost=7340.08..8336.11 rows=90 width=36) (actual time=109.898..226.390 rows=2626 loops=1)
+GroupAggregate  (cost=7380.76..8376.78 rows=90 width=36)
   Group Key: b.book
   Filter: ('{M}'::text[] <@ array_agg(a.author ORDER BY a.author))
-  Rows Removed by Filter: 15275
-  ->  Sort  (cost=7340.08..7510.77 rows=68276 width=6) (actual time=108.249..132.448 rows=68276 loops=1)
+  ->  Sort  (cost=7380.76..7551.45 rows=68276 width=6)
         Sort Key: b.book
-        Sort Method: external merge  Disk: 1136kB
-        ->  Hash Join  (cost=484.36..1857.83 rows=68276 width=6) (actual time=13.597..71.021 rows=68276 loops=1)
+        ->  Hash Join  (cost=553.97..1898.50 rows=68276 width=6)
               Hash Cond: (ab.book = b.book)
-              ->  Hash Join  (cost=1.58..1195.78 rows=68276 width=6) (actual time=0.060..34.309 rows=68276 loops=1)
+              ->  Hash Join  (cost=71.20..1236.46 rows=68276 width=6)
                     Hash Cond: (ab.author = a.author)
-                    ->  Seq Scan on ab  (cost=0.00..985.76 rows=68276 width=6) (actual time=0.017..10.462 rows=68276 loops=1)
-                    ->  Hash  (cost=1.26..1.26 rows=26 width=2) (actual time=0.020..0.021 rows=26 loops=1)
-                          Buckets: 1024  Batches: 1  Memory Usage: 9kB
-                          ->  Seq Scan on authors a  (cost=0.00..1.26 rows=26 width=2) (actual time=0.007..0.011 rows=26 loops=1)
-              ->  Hash  (cost=259.01..259.01 rows=17901 width=4) (actual time=13.469..13.469 rows=17901 loops=1)
-                    Buckets: 32768  Batches: 1  Memory Usage: 900kB
-                    ->  Seq Scan on books b  (cost=0.00..259.01 rows=17901 width=4) (actual time=0.015..5.302 rows=17901 loops=1)
-Planning Time: 0.782 ms
-Execution Time: 230.062 ms
+                    ->  Seq Scan on ab  (cost=0.00..985.76 rows=68276 width=6)
+                    ->  Hash  (cost=37.20..37.20 rows=2720 width=2)
+                          ->  Seq Scan on authors a  (cost=0.00..37.20 rows=2720 width=2)
+              ->  Hash  (cost=259.01..259.01 rows=17901 width=4)
+                    ->  Seq Scan on books b  (cost=0.00..259.01 rows=17901 width=4)
 ```
 
 </details>
@@ -342,17 +339,18 @@ Execution Time: 230.062 ms
 
 </details>
 
-💰 Cost: 7340~8336
+💰 Cost: 7380 ~ 8376
 
-⌛ Timing: 215~324
+⌛ Timing: 284 _±50_ ms
 
 ✅ Pros: `¯\_(ツ)_/¯`
 
-❌ Cons: drop of self-esteem.
+❌ Cons: wasted time.
 
-### Approach 3: CTE
+### Approach 3: "GROUP BY" CTE + "WHERE"
 
-Here we are wrapping subquery into CTE, hoping our self-esteem will rise up.
+Here we are wrapping subquery into CTE.
+Expecting PostgreSQL to build a table-like object and do not perform filtering by aggregate.
 
 <details><summary>SQL</summary>
 
@@ -385,28 +383,22 @@ select
 <details><summary>Query plan</summary>
 
 ```text
-CTE Scan on cte  (cost=8075.91..8478.68 rows=90 width=64) (actual time=98.535..222.530 rows=2626 loops=1)
+CTE Scan on cte  (cost=8116.59..8519.36 rows=90 width=64)
   Filter: ('{M}'::text[] <@ authors)
-  Rows Removed by Filter: 15275
   CTE cte
-    ->  GroupAggregate  (cost=7340.08..8075.91 rows=17901 width=36) (actual time=96.565..211.477 rows=17901 loops=1)
+    ->  GroupAggregate  (cost=7380.76..8116.59 rows=17901 width=36)
           Group Key: b.book
-          ->  Sort  (cost=7340.08..7510.77 rows=68276 width=6) (actual time=96.525..120.235 rows=68276 loops=1)
+          ->  Sort  (cost=7380.76..7551.45 rows=68276 width=6)
                 Sort Key: b.book
-                Sort Method: external merge  Disk: 1136kB
-                ->  Hash Join  (cost=484.36..1857.83 rows=68276 width=6) (actual time=7.786..55.910 rows=68276 loops=1)
+                ->  Hash Join  (cost=553.97..1898.50 rows=68276 width=6)
                       Hash Cond: (ab.book = b.book)
-                      ->  Hash Join  (cost=1.58..1195.78 rows=68276 width=6) (actual time=0.121..28.798 rows=68276 loops=1)
+                      ->  Hash Join  (cost=71.20..1236.46 rows=68276 width=6)
                             Hash Cond: (ab.author = a.author)
-                            ->  Seq Scan on ab  (cost=0.00..985.76 rows=68276 width=6) (actual time=0.062..8.473 rows=68276 loops=1)
-                            ->  Hash  (cost=1.26..1.26 rows=26 width=2) (actual time=0.035..0.035 rows=26 loops=1)
-                                  Buckets: 1024  Batches: 1  Memory Usage: 9kB
-                                  ->  Seq Scan on authors a  (cost=0.00..1.26 rows=26 width=2) (actual time=0.015..0.018 rows=26 loops=1)
-                      ->  Hash  (cost=259.01..259.01 rows=17901 width=4) (actual time=7.488..7.489 rows=17901 loops=1)
-                            Buckets: 32768  Batches: 1  Memory Usage: 900kB
-                            ->  Seq Scan on books b  (cost=0.00..259.01 rows=17901 width=4) (actual time=0.152..2.492 rows=17901 loops=1)
-Planning Time: 5.721 ms
-Execution Time: 226.645 ms
+                            ->  Seq Scan on ab  (cost=0.00..985.76 rows=68276 width=6)
+                            ->  Hash  (cost=37.20..37.20 rows=2720 width=2)
+                                  ->  Seq Scan on authors a  (cost=0.00..37.20 rows=2720 width=2)
+                      ->  Hash  (cost=259.01..259.01 rows=17901 width=4)
+                            ->  Seq Scan on books b  (cost=0.00..259.01 rows=17901 width=4)
 ```
 
 </details>
@@ -421,15 +413,15 @@ Execution Time: 226.645 ms
 
 </details>
 
-💰 Cost: 8075~8478
+💰 Cost: 8116 ~ 8519
 
-⌛ Timing: 222~338
+⌛ Timing: 290 _±52_ ms
 
-✅ Pros: `¯\_(ツ)_/¯`
+✅ Pros: flexibility that CTE provides.
 
-❌ Cons: drop of self-esteem, again.
+❌ Cons: slight performance impact due to CTE node.
 
-### Approach 4: JOIN LATERAL
+### Approach 4: Subquery + "LATERAL" Subquery
 
 In few words, LATERAL allows one subquery to be referenced from another.
 Please, [RTFM](https://www.postgresql.org/docs/current/queries-table-expressions.html#id-1.5.6.6.5.10.2).
@@ -477,40 +469,32 @@ select
 <details><summary>Query plan</summary>
 
 ```text
-GroupAggregate  (cost=3301.42..3502.12 rows=10035 width=36) (actual time=70.447..74.045 rows=2626 loops=1)
+GroupAggregate  (cost=3337.68..3534.56 rows=9844 width=36)
   Group Key: b.book
-  ->  Sort  (cost=3301.42..3326.50 rows=10035 width=6) (actual time=70.434..71.114 rows=10151 loops=1)
+  ->  Sort  (cost=3337.68..3362.29 rows=9844 width=6)
         Sort Key: b.book
-        Sort Method: quicksort  Memory: 860kB
-        ->  Hash Join  (cost=875.80..2634.45 rows=10035 width=6) (actual time=15.569..65.215 rows=10151 loops=1)
+        ->  Hash Join  (cost=950.81..2684.78 rows=9844 width=6)
               Hash Cond: (ab_1.author = a_1.author)
-              ->  Nested Loop  (cost=874.22..2602.23 rows=10035 width=6) (actual time=15.459..62.366 rows=10151 loops=1)
-                    ->  Nested Loop  (cost=873.92..1254.01 rows=2631 width=12) (actual time=15.412..21.308 rows=2626 loops=1)
-                          ->  Seq Scan on authors a  (cost=0.00..1.32 rows=1 width=2) (actual time=0.010..0.012 rows=1 loops=1)
-                                Filter: (author = 'M'::text)
-                                Rows Removed by Filter: 25
-                          ->  Hash Join  (cost=873.92..1226.37 rows=2631 width=14) (actual time=15.401..20.913 rows=2626 loops=1)
+              ->  Nested Loop  (cost=879.61..2587.69 rows=9844 width=6)
+                    ->  Nested Loop  (cost=879.32..1265.09 rows=2581 width=12)
+                          ->  Index Only Scan using authors_pkey on authors a  (cost=0.15..8.17 rows=1 width=2)
+                                Index Cond: (author = 'M'::text)
+                          ->  Hash Join  (cost=879.16..1231.11 rows=2581 width=14)
                                 Hash Cond: (b.book = b_1.book)
-                                ->  Seq Scan on books b  (cost=0.00..259.01 rows=17901 width=4) (actual time=0.010..1.935 rows=17901 loops=1)
-                                ->  Hash  (cost=841.04..841.04 rows=2631 width=10) (actual time=15.247..15.247 rows=2626 loops=1)
-                                      Buckets: 4096  Batches: 1  Memory Usage: 145kB
-                                      ->  Hash Join  (cost=421.46..841.04 rows=2631 width=10) (actual time=3.745..13.524 rows=2626 loops=1)
+                                ->  Seq Scan on books b  (cost=0.00..259.01 rows=17901 width=4)
+                                ->  Hash  (cost=846.90..846.90 rows=2581 width=10)
+                                      ->  Hash Join  (cost=427.82..846.90 rows=2581 width=10)
                                             Hash Cond: (b_1.book = ab.book)
-                                            ->  Seq Scan on books b_1  (cost=0.00..259.01 rows=17901 width=4) (actual time=0.011..3.539 rows=17901 loops=1)
-                                            ->  Hash  (cost=388.57..388.57 rows=2631 width=6) (actual time=3.313..3.313 rows=2626 loops=1)
-                                                  Buckets: 4096  Batches: 1  Memory Usage: 132kB
-                                                  ->  Bitmap Heap Scan on ab  (cost=52.68..388.57 rows=2631 width=6) (actual time=0.514..1.771 rows=2626 loops=1)
+                                            ->  Seq Scan on books b_1  (cost=0.00..259.01 rows=17901 width=4)
+                                            ->  Hash  (cost=395.56..395.56 rows=2581 width=6)
+                                                  ->  Bitmap Heap Scan on ab  (cost=60.30..395.56 rows=2581 width=6)
                                                         Recheck Cond: (author = 'M'::text)
-                                                        Heap Blocks: exact=195
-                                                        ->  Bitmap Index Scan on ab_author_idx  (cost=0.00..52.02 rows=2631 width=0) (actual time=0.488..0.488 rows=2626 loops=1)
+                                                        ->  Bitmap Index Scan on ab_author_idx  (cost=0.00..59.65 rows=2581 width=0)
                                                               Index Cond: (author = 'M'::text)
-                    ->  Index Scan using ab_book_idx on ab ab_1  (cost=0.29..0.47 rows=4 width=6) (actual time=0.014..0.015 rows=4 loops=2626)
+                    ->  Index Scan using ab_book_idx on ab ab_1  (cost=0.29..0.47 rows=4 width=6)
                           Index Cond: (book = b_1.book)
-              ->  Hash  (cost=1.26..1.26 rows=26 width=2) (actual time=0.048..0.048 rows=26 loops=1)
-                    Buckets: 1024  Batches: 1  Memory Usage: 9kB
-                    ->  Seq Scan on authors a_1  (cost=0.00..1.26 rows=26 width=2) (actual time=0.011..0.015 rows=26 loops=1)
-Planning Time: 2.524 ms
-Execution Time: 74.299 ms
+              ->  Hash  (cost=37.20..37.20 rows=2720 width=2)
+                    ->  Seq Scan on authors a_1  (cost=0.00..37.20 rows=2720 width=2)
 ```
 
 </details>
@@ -525,10 +509,316 @@ Execution Time: 74.299 ms
 
 </details>
 
-💰 Cost: 3301~3502
+💰 Cost: 3337 ~ 3534
 
-⌛ Timing: 65~100
+⌛ Timing: 75 _±15_ ms
 
 ✅ Pros: Fast and furious!
 
-❌ Cons: drop of self-esteem, again: one does not simply understand `LATERAL`.
+❌ Cons: low flexibility due to many subqueries, and `LATERAL`, of course.
+
+### Approach 5: CTE + CTE
+
+In this approach we build two CTEs.
+The former produces books of given author.
+The latter produces authors for books from the former.
+
+This approach may be implemented in two ways:
+
+1. select plain data in CTE 2, apply grouping in the top query;
+1. apply grouping in CTE 2, select `*` in the top query;
+
+Both ways are equivalent.
+
+<details><summary>SQL</summary>
+
+```sql
+with author_books(book)          as (
+                                      select
+                                        b.book as book
+                                        from
+                                          authors    as a
+                                          join ab
+                                               using (author)
+                                          join books as b
+                                               using (book)
+                                        where
+                                          a.author = 'M'
+                                      ),
+     book_authors(book, authors) as (
+                                      select
+                                        b.book              as book,
+                                        array_agg(a.author) as authors
+                                        from
+                                          authors           as a
+                                          join ab
+                                               using (author)
+                                          join author_books as b
+                                               using (book)
+                                        group by
+                                          b.book
+                                      )
+select
+  book,
+  authors
+  from
+    book_authors
+;
+```
+
+</details>
+
+<details><summary>Query plan</summary>
+
+```text
+CTE Scan on book_authors  (cost=3038.86..3042.86 rows=200 width=64)
+  CTE author_books
+    ->  Nested Loop  (cost=427.98..880.88 rows=2581 width=4)
+          ->  Index Only Scan using authors_pkey on authors a  (cost=0.15..8.17 rows=1 width=2)
+                Index Cond: (author = 'M'::text)
+          ->  Hash Join  (cost=427.82..846.90 rows=2581 width=6)
+                Hash Cond: (b.book = ab.book)
+                ->  Seq Scan on books b  (cost=0.00..259.01 rows=17901 width=4)
+                ->  Hash  (cost=395.56..395.56 rows=2581 width=6)
+                      ->  Bitmap Heap Scan on ab  (cost=60.30..395.56 rows=2581 width=6)
+                            Recheck Cond: (author = 'M'::text)
+                            ->  Bitmap Index Scan on ab_author_idx  (cost=0.00..59.65 rows=2581 width=0)
+                                  Index Cond: (author = 'M'::text)
+  CTE book_authors
+    ->  HashAggregate  (cost=2155.48..2157.98 rows=200 width=64)
+          Group Key: b_1.book
+          ->  Hash Join  (cost=1910.41..2106.10 rows=9875 width=34)
+                Hash Cond: (ab_1.author = a_1.author)
+                ->  Hash Join  (cost=1839.21..2008.94 rows=9875 width=34)
+                      Hash Cond: (b_1.book = ab_1.book)
+                      ->  CTE Scan on author_books b_1  (cost=0.00..51.62 rows=2581 width=32)
+                      ->  Hash  (cost=985.76..985.76 rows=68276 width=6)
+                            ->  Seq Scan on ab ab_1  (cost=0.00..985.76 rows=68276 width=6)
+                ->  Hash  (cost=37.20..37.20 rows=2720 width=2)
+                      ->  Seq Scan on authors a_1  (cost=0.00..37.20 rows=2720 width=2)
+```
+
+</details>
+
+<details><summary>Response sample</summary>
+
+| book | authors   |
+|------|-----------|
+| ALM  | {A,L,M}   |
+| ALMB | {A,L,M,B} |
+| ...  | ...       |
+
+</details>
+
+💰 Cost: 3038 ~ 3042
+
+⌛ Timing: 53 _±10_ ms
+
+✅ Pros: Fast and flexible!
+
+❌ Cons: multiple CTEs
+
+### Approach 6: CTE + CTE on mtm table
+
+In this example (and maybe in your project) the whole information is contained in many-to-many table.
+Just remove redundant JOINs from [Approach 5](#approach-5-cte-cte).
+
+<details><summary>SQL</summary>
+
+```sql
+with author_books(book)          as (
+                                      select
+                                        ab.book as book
+                                        from
+                                          ab
+                                        where
+                                          ab.author = 'M'
+                                      ),
+     book_authors(book, authors) as (
+                                      select
+                                        b.book               as book,
+                                        array_agg(ab.author) as authors
+                                        from
+                                          ab
+                                          join author_books as b
+                                               using (book)
+                                        group by
+                                          b.book
+                                      )
+select
+  book,
+  authors
+  from
+    book_authors
+;
+```
+
+</details>
+
+<details><summary>Query plan</summary>
+
+```text
+CTE Scan on book_authors  (cost=2456.37..2460.37 rows=200 width=64)
+  CTE author_books
+    ->  Bitmap Heap Scan on ab  (cost=60.30..395.56 rows=2581 width=4)
+          Recheck Cond: (author = 'M'::text)
+          ->  Bitmap Index Scan on ab_author_idx  (cost=0.00..59.65 rows=2581 width=0)
+                Index Cond: (author = 'M'::text)
+  CTE book_authors
+    ->  HashAggregate  (cost=2058.31..2060.81 rows=200 width=64)
+          Group Key: b.book
+          ->  Hash Join  (cost=1839.21..2008.94 rows=9875 width=34)
+                Hash Cond: (b.book = ab2.book)
+                ->  CTE Scan on author_books b  (cost=0.00..51.62 rows=2581 width=32)
+                ->  Hash  (cost=985.76..985.76 rows=68276 width=6)
+                      ->  Seq Scan on ab ab2  (cost=0.00..985.76 rows=68276 width=6)
+```
+
+</details>
+
+<details><summary>Response sample</summary>
+
+| book | authors   |
+|------|-----------|
+| ALM  | {A,L,M}   |
+| ALMB | {A,L,M,B} |
+| ...  | ...       |
+
+</details>
+
+💰 Cost: 2456 ~ 2460
+
+⌛ Timing: 50 _±19_ ms
+
+✅ Pros: Fast
+
+❌ Cons: inflexible for generic query generators
+
+### Approach 7: M2M JOIN LATERAL M2M
+
+Similar to the [Approach 4](#approach-4-subquery-lateral-subquery), with redundant JOINs removed.
+
+<details><summary>SQL</summary>
+
+```sql
+select
+  author_books.book,
+  array_agg(book_authors.author) as authors
+  from
+    (
+      select
+        ab1.book as book
+        from
+          ab as ab1
+        where
+          ab1.author = 'M'
+      )   as author_books
+    join
+      lateral (
+        select
+          ab2.author as author
+          from
+            ab as ab2
+          where
+            ab2.book = author_books.book
+        ) as book_authors
+      on true
+  group by
+    author_books.book
+```
+
+</details>
+
+<details><summary>Query plan</summary>
+
+```text
+GroupAggregate  (cost=2679.59..2784.22 rows=2446 width=36)
+  Group Key: ab1.book
+  ->  Sort  (cost=2679.59..2704.27 rows=9875 width=6)
+        Sort Key: ab1.book
+        ->  Hash Join  (cost=427.82..2024.40 rows=9875 width=6)
+              Hash Cond: (ab2.book = ab1.book)
+              ->  Seq Scan on ab ab2  (cost=0.00..985.76 rows=68276 width=6)
+              ->  Hash  (cost=395.56..395.56 rows=2581 width=4)
+                    ->  Bitmap Heap Scan on ab ab1  (cost=60.30..395.56 rows=2581 width=4)
+                          Recheck Cond: (author = 'M'::text)
+                          ->  Bitmap Index Scan on ab_author_idx  (cost=0.00..59.65 rows=2581 width=0)
+                                Index Cond: (author = 'M'::text)
+```
+
+</details>
+
+<details><summary>Response sample</summary>
+
+| book | authors   |
+|------|-----------|
+| ALM  | {A,L,M}   |
+| ALMB | {A,L,M,B} |
+| ...  | ...       |
+
+</details>
+
+💰 Cost: 2679 ~ 2784
+
+⌛ Timing: 38 _±11_ ms
+
+✅ Pros: Fast
+
+❌ Cons: inflexible for generic query generators
+
+### Approach 8: M2M JOIN M2M
+
+Simply join M2M with itself and gather necessary information.
+
+<details><summary>SQL</summary>
+
+```sql
+select
+  author_books.book,
+  array_agg(book_authors.author) as authors
+  from
+    ab      as author_books
+    join ab as book_authors
+         on author_books.author = 'M' and author_books.book = book_authors.book
+  group by
+    author_books.book
+```
+
+</details>
+
+<details><summary>Query plan</summary>
+
+```text
+GroupAggregate  (cost=2679.59..2784.22 rows=2446 width=36)
+  Group Key: author_books.book
+  ->  Sort  (cost=2679.59..2704.27 rows=9875 width=6)
+        Sort Key: author_books.book
+        ->  Hash Join  (cost=427.82..2024.40 rows=9875 width=6)
+              Hash Cond: (book_authors.book = author_books.book)
+              ->  Seq Scan on ab book_authors  (cost=0.00..985.76 rows=68276 width=6)
+              ->  Hash  (cost=395.56..395.56 rows=2581 width=4)
+                    ->  Bitmap Heap Scan on ab author_books  (cost=60.30..395.56 rows=2581 width=4)
+                          Recheck Cond: (author = 'M'::text)
+                          ->  Bitmap Index Scan on ab_author_idx  (cost=0.00..59.65 rows=2581 width=0)
+                                Index Cond: (author = 'M'::text)
+```
+
+</details>
+
+<details><summary>Response sample</summary>
+
+| book | authors   |
+|------|-----------|
+| ALM  | {A,L,M}   |
+| ALMB | {A,L,M,B} |
+| ...  | ...       |
+
+</details>
+
+💰 Cost: 2679 ~ 2784
+
+⌛ Timing: 38 _±8_ ms
+
+✅ Pros: Fast
+
+❌ Cons: inflexible for generic query generators
