@@ -2,9 +2,16 @@
 
 ## Spoilers!
 
-| Approach | Costs | Timing |
-|----------|-------|--------|
-
+| Approach                                                                |    Costs 💰 |    Timing ⌛️ |
+|-------------------------------------------------------------------------|------------:|-------------:|
+| ["HAVING"](#approach-1-having)                                          | 7380 ~ 8376 | 256 _±51_ ms |
+| ["GROUP BY" subquery + "WHERE"](#approach-2-group-by-subquery--where)   | 7380 ~ 8376 | 284 _±50_ ms |
+| ["GROUP BY" CTE + "WHERE"](#approach-3-group-by-cte--where)             | 8116 ~ 8519 | 290 _±52_ ms |
+| [Subquery + "LATERAL" Subquery](#approach-4-subquery--lateral-subquery) | 3337 ~ 3534 |  75 _±15_ ms |
+| [CTE + CTE](#approach-5-cte--cte)                                       | 3038 ~ 3042 |  53 _±10_ ms |
+| [CTE + CTE on mtm table](#approach-6-cte--cte-on-mtm-table)             | 2456 ~ 2460 |  50 _±19_ ms |
+| [M2M JOIN LATERAL M2M](#approach-7-m2m-join-lateral-m2m)                | 2679 ~ 2784 |  38 _±11_ ms |
+| [M2M JOIN M2M](#approach-8-m2m-join-m2m)                                | 2679 ~ 2784 |   38 _±8_ ms |
 
 ## Description
 
