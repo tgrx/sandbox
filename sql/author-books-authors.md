@@ -628,7 +628,7 @@ CTE Scan on book_authors  (cost=3038.86..3042.86 rows=200 width=64)
 ### Approach 6: CTE + CTE on mtm table
 
 In this example (and maybe in your project) the whole information is contained in many-to-many table.
-Just remove redundant JOINs from [Approach 5](#approach-5-cte-cte).
+Just remove redundant JOINs from [Approach 5](#approach-5-cte--cte).
 
 <details><summary>SQL</summary>
 
@@ -703,7 +703,7 @@ CTE Scan on book_authors  (cost=2456.37..2460.37 rows=200 width=64)
 
 ### Approach 7: M2M JOIN LATERAL M2M
 
-Similar to the [Approach 4](#approach-4-subquery-lateral-subquery), with redundant JOINs removed.
+Similar to the [Approach 4](#approach-4-subquery--lateral-subquery), with redundant JOINs removed.
 
 <details><summary>SQL</summary>
 
